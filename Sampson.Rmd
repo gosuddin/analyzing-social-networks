@@ -1,0 +1,141 @@
+---
+title: "SAMPSON"
+author: "Gosuddin Siddiqi"
+date: "February 25, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, warning= FALSE,message=FALSE}
+#load the library
+library(statnet)
+library(circlize)
+library(ggplot2) # for making pretty plots
+library(RColorBrewer) # Pretty Colors using ColorBrewer
+library(intergraph) # required package for GGally
+library(GGally) # ggplot2 extention for use in network graphs
+
+#load data
+load("sampson.RData")
+data(sampson)
+```
+
+Sampson collected various relationships between several monks at a monastery. Suppose we divide the types of social ties into positive and negative relationship types as follows:
+
+* Positive Relationships: Esteem, Influence, LikeT1, LikeT2, LikeT3, and Praise
+* Negative Relationships: Disesteem, NegInfluence, Dislike, and Blame
+
+Using a vector permutation test, evaluate the questions below.
+
+[^2]: F. S. Sampson. A novitiate in a period of change: An experimental and case study of social relationships. PhD thesis, Cornell University. 1968.
+
+
+##### (a) Are positive relations more reciprocal (relative to density) than negative ones?
+
+Null Hypothesis:Positive relations are not more reciprocal (relative to density) than negative ones
+
+```{r}
+
+perm.test<-function(x,niter=5000){  #Define a simple test function
+  posvector <- c(1,0,1,0,1,1,1,0,1,0)
+  c.obs<-sum(x[(posvector==1)]) - sum(x[(posvector==0)])
+  c.rep<-vector()
+  for(i in 1:niter)
+    {
+    newpos <- sample(posvector)
+    c.rep[i]<- sum(x[(newpos == 1)]) - sum(x[(newpos == 0)])
+  }
+  cat("Vector Permutation Test:\n\tObserved differnce: ",
+     c.obs,"\tReplicate quantiles (niter=",niter,")\n",sep="")
+  cat("\t\tPr(rho>=obs):",mean(c.rep>=c.obs),"\n")
+  cat("\t\tPr(rho<=obs):",mean(c.rep<=c.obs),"\n")
+  cat("Observed Difference", c.obs,"\n")
+  cat("\t\tPr(|rho|>=|obs|):",mean(abs(c.rep)>=abs(c.obs)),"\n")
+  
+  invisible(list(obs=c.obs,rep=c.rep))
+}
+```
+
+```{r}
+reci <- grecip(sampson, measure = "edgewise.lrr")
+posvector <- c(1,0,1,0,1,1,1,0,1,0)
+perm.test(reci)
+```
+
+Since the p-value is less than the critical p-value(0.05), we reject our null hypothesis and conclude that positive relations are more reciprocal than negative relations.
+
+##### (b) Are positive relations more transitive (relative to density) than negative ones?
+
+Null Hypothesis: positive relations are not more transitive (relative to density) than negative ones
+
+```{r}
+# Transitivity related to density will be the log ratio. Since there is no direct function to calculate transtivity with respect to density
+trans <- log(gtrans(sampson)/gden(sampson))
+perm.test(trans)
+
+```
+
+Since the p-value is less than the critical p-value(0.05), we reject our null hypothesis and conclude that positive relations are more transitivity than negative relations.
+
+
+##### (c)  Discuss the findings from part (a) and part (b).
+
+Based on the tests conducted above we can conclude two things:
+(a) The positive relations amongst the Monks are reciprocated more than the negative relations.
+When Monk M1 praises M2 there are high chances M2 would also praise M1.
+Negative relations here are more one-sided which means that though Monk M1 blames Monk M2, chances of M2 blaming M1 is less.
+(b) The transitivity suggests that in positive relations, Monks' relations are propagated to others. Thus, if M1 praises M2 and M2 praises M3, there are high chances that M1 would also praise M3. In negative relations, with the same configurations, M1 would have low chances of blaming the M3.
+
+
+##### (d)  Reliability of Informant Accuracy
+
+Discussion on how issues of informant accuracy may or may not affect this data. Be sure to specifically discuss how possible error might be addressed.
+
+Sampson dataset has beeen of particular interest to me. It is intriguing to me because it try to captures various sentiments that are difficult to gauge. The Sampson dataset consists of social interactions between monks. So there exists a tie with Monk i self-reports an interaction with Monk j. The dataset consists of various relations - positive and negatives. Every Monk was asked to list top 3 or 4 choices for a particular relation say Liking or Praising.The dataset was recoreded at three different times to capture the changes in sentiments over time. 
+There would be several issues related to informant accuracy. The sentiments are difficult to measure. The degree of the sentiment would play an immense role in this study. Monks who liked others may not like them much later in the study but would still end up with 3 same choices. It might be helpful to define a likert scale of all the sentiments and then ask to self- report the interactions.
+The use of likert scale adds another dimension to the study where we can use the likert scale results to make the ties as weighted ties and then study the changes in the sentiments over a period of time.
+
+#### (e) Pretty Visualizations!
+
+```{r}
+
+#simple graph
+ggnet2(samplike,
+      mode = "circle",
+      node.color = "tomato",
+      alpha = .5,
+      label = network.vertex.names(samplike)
+      )
+
+#Pretty graphs
+
+#Esteem relationship
+chordDiagram(as.sociomatrix(sampson$Esteem))
+
+#Dissteem relationship
+chordDiagram(as.sociomatrix(sampson$Disesteem))
+
+#Influence relationship
+chordDiagram(as.sociomatrix(sampson$Influence))
+
+#NegInfluence relationship
+chordDiagram(as.sociomatrix(sampson$NegInfluence))
+
+#LikeT1 relationship
+chordDiagram(as.sociomatrix(sampson$LikeT1))
+
+#LikeT2 relationship
+chordDiagram(as.sociomatrix(sampson$LikeT2))
+
+#LikeT3 relationship
+chordDiagram(as.sociomatrix(sampson$LikeT3))
+
+#DisLike relationship
+chordDiagram(as.sociomatrix(sampson$Dislike))
+
+#Praise relationship
+chordDiagram(as.sociomatrix(sampson$Praise))
+
+#Blame relationship
+chordDiagram(as.sociomatrix(sampson$Blame))
+```
+
