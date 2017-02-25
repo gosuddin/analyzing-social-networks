@@ -1,0 +1,102 @@
+---
+title: "Multivariate Analysis of Network"
+author: "Gosuddin Siddiqi"
+date: "February 25, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, warning= FALSE,message=FALSE}
+#load the library
+library(statnet)
+library(circlize)
+load("trade.RData")
+```
+
+ This data captures trade in various types of products/materials among countries. Let explore our data.
+
+```{r}
+str(trade)
+
+#What kind of trades?
+row.names(trade)
+
+#What all countries participate?
+colnames(trade)
+  
+
+#Visualizing all trade networks
+chordDiagram(trade[1,,])  #Minerals
+
+chordDiagram(trade[2,,])  #CRUDE_MATERIALS
+
+chordDiagram(trade[3,,])  #FOODS
+
+chordDiagram(trade[4,,])  #MANUFACTURED_GOODS
+
+chordDiagram(trade[5,,])  #DIPLOMATIC_EXCHANGE
+
+```
+
+
+##### (a) Clustering #####
+
+Computing a hierarchical clustering of the trade networks, based on the Hamming distance. Comparing this with a two-dimensional MDS solution on the same data.
+
+```{r}
+tradehd<-hdist(trade)
+tradehd
+
+# Preparing MDS solution
+trademds<-cmdscale(tradehd)
+trademds
+plot(trademds,type="n")
+text(trademds,label=rownames(trade))
+
+#plot clusters
+tradehc<-hclust(as.dist(tradehd))
+plot(tradehc,labels=c("MINERALS","CRUDE_MATERIALS","FOODS","MANUFACTURED_GOODS","DIPLOMATIC_EXCHANGE"))         
+rect.hclust(tradehc,k=3)
+
+
+```
+
+
+
+##### (b) PCA #####
+
+Conducting PCA analysis to understand the relationship in the trade network.
+
+```{r}
+tradecor <- gcor(trade)
+tradecor
+
+#Prepare Eigen
+tradeeig <- eigen(tradecor)
+
+evals<-tradeeig$value                                      
+evals/sum(evals)  
+
+#Screenplot
+barplot(evals/sum(evals),names.arg=1:length(evals))
+
+
+#load 2 components
+load<-tradeeig$vector[,1:2]
+rownames(load)<-rownames(trade)
+load
+
+#generate plot
+plot(load[,1:2],type="n",asp=1,xlab="PC 1",ylab="PC 2")
+abline(h=0,v=0,lty=3)
+arrows(0,0,load[,1],load[,2],col=2)
+text(load[,1:2],label=rownames(trade))
+
+```
+The variance in the underlying trade network can be explained sufficiently by the trade of minerals alone. Almost 56% variance is explained by the Minerals alone.
+
+##### (c) Discussion #####
+
+Discussing our PCA results with screen plots.
+
+From the MDS plot we observe that there is something unqiue about Minerals that places it far away from the Diplomatic_Exchange and the cluster of Crude_materials, manufactured good and foods. 
+This discussion validates with variation observed in the PCA plot. Minerals suffices for the 56% variance and that Minerals is far away from the rest of the trade networks.
