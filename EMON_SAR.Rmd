@@ -1,0 +1,126 @@
+---
+title: "EMON SAR"
+author: "Gosuddin Siddiqi"
+date: "February 25, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, warning= FALSE,message=FALSE}
+#load the library
+library(statnet)
+library(circlize)
+
+#load data
+data("emon")
+```
+
+##### (a) Visualizing Networks
+
+This data set consists of seven individual network data sets of emergent multiorganizational networks (EMONs) in the context of search and rescue activities. These data sets are: the Cheyenne SAR EMON, the Hurricane Frederic SAR EMON, the Lake Pomona SAR EMON, the Mt. Si SAR EMON, the Mt. St. Helens SAR EMON, the Texas Hill Country SAR EMON, and the Wichita Falls SAR EMON. We interpret the relationships in each of these networks as one of salient communication. 
+
+Let's plot each of the network for attribute associated with it.
+
+
+```{r}
+nameofnetwork <- names(emon)
+
+for (i in 1:7)
+  {
+  
+plot(emon[[i]],vertex.col = "Sponsorship", main = paste0(nameofnetwork[i]," - Sponsorship attribute"))
+vals <- sort(unique(emon[[i]]%v%"Sponsorship"))
+legend("topleft",fill=1:length(vals),legend=vals,bty="n")
+}
+
+
+```
+
+
+Using the `mixingmatrix` command, we obtain mixing matrices for all seven EMONs using "Sponsorship" as the relevant vertex attribute. For each network let's provide:
+
+* The raw mixing matrix.
+* The matrix of mixing rates/block densities (this was called $r$ in class).
+* The matrix of marginal $z$-scores, using the Poisson approximation. 
+* A plot of the reduced form blockmodel, with edge widths set based on mixing rates.
+* A disucssion of our findings.
+
+```{r}
+cal_mixingmeasures <-function(networkMat,vertexAttr){
+  
+mmObs <- mixingmatrix(networkMat,vertexAttr)
+
+print("Mixing Matrix")
+print(mmObs$matrix)
+
+no_of_vertices <- table(get.vertex.attribute(networkMat, "Sponsorship"))
+
+expected_ties <- matrix(0,nrow = length(no_of_vertices),ncol = length(no_of_vertices))
+
+for (i in 1: length(no_of_vertices))
+{
+  for (j in 1:length(no_of_vertices))
+  {
+    if (i==j)
+    {
+      expected_ties[i,j] = no_of_vertices[i] * (no_of_vertices[i]-1)
+    }
+    else{
+         expected_ties[i,j] = no_of_vertices[i] * no_of_vertices[j]
+    }
+  }
+}
+
+mmr = mmObs$matrix / expected_ties
+
+print("Mixing Rate")
+print(mmr)
+
+gplot(abs(mmr)>0.5,edge.col=sign(mmr)+3, main = "Mixing Rates",
+      label=rownames(mmr),boxed.lab=FALSE,diag=TRUE) 
+
+s<-sum(mmObs$matrix)
+rSums <- rowSums(mmObs$matrix)
+cSums <- colSums(mmObs$matrix)
+
+poiss_expected_ties <- matrix(0,nrow = length(no_of_vertices),ncol = length(no_of_vertices))
+
+
+
+for (i in 1:length(no_of_vertices))
+{
+  for(j in 1:length(no_of_vertices))
+  {
+    poiss_expected_ties[i,j] <- (rSums[i]*cSums[j])/s
+  }
+}
+
+mmrz <- (mmObs$matrix - poiss_expected_ties) / sqrt (poiss_expected_ties)
+
+print("Mixing Rate Z-Scores")
+print(mmrz)
+
+
+gplot(abs(mmrz)>2,edge.col=sign(mmrz)+3, main = "Mixing Rates Z-scores",
+      label=rownames(mmrz),boxed.lab=FALSE,diag=TRUE) 
+
+}
+```
+
+
+```{r}
+
+for(i in 1: length(emon)){
+  cal_mixingmeasures(emon[[i]],"Sponsorship")
+}
+
+```
+
+With the threshold of 0.5 for the mixing rates we observe ties in some of the network and not all. When the network observes densities above 0.5, we observe that the interactions consists of organizations sponsored at State level and Private level.
+
+Based on the Z attribute, we observe that none but in Wichita Network the interaction of organizations funded at Federal to Private is unusual.
+
+##### (c) Discussion
+
+Based on your analysis in parts (a)-(b) how would we describe the overall pattern of communication mixing in the Drabek et al. SAR EMONs?
+
+From the observations in part (a), we observed few cases of selective mixing. Rest of the network are hetereogenous network with respect to Sponsorship levels.
